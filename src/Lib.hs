@@ -2,7 +2,7 @@
 
 module Lib where
 
-import Prelude hiding(id)
+import Prelude hiding(id, print)
 
 import Data.Typeable
 import Data.Dynamic
@@ -58,14 +58,40 @@ newtype Eff i o = Eff (StaticWriter Dependencies (Kleisli (Free Request)) i o)
 send :: forall e i o. Typeable e => e i o -> Eff i o
 send request = Eff $ StaticArrow (Set.singleton (typeRep (Proxy @e)), Kleisli (\i -> liftF (Request request i id)))
 
+getDependencies :: Eff i o -> Dependencies
+getDependencies (Eff (StaticArrow (deps, _))) = deps
+
 data Teletype i o where
   Print :: Teletype String ()
   ReadLine :: Teletype () String
 
-echo :: Eff () ()
-echo = proc () -> do
-  line <- send ReadLine -< ()
-  if line /= "" then
-    send Print -< line
+print = send Print
+readLine = send ReadLine
+get = send Get
+set = send Set
+
+data DB i o where
+  Get :: DB String (Maybe String)
+  Set :: DB (String, String) ()
+
+repl :: Eff () ()
+repl = proc () -> do
+  line <- readLine -< ()
+  if line /= "" then do
+    response <- handleCommand -< line
+    print -< response
   else returnA -< ()
-  returnA -< ()
+
+handleCommand :: Eff String String
+handleCommand = proc line ->
+  case words line of
+    ["get", key] -> do
+      m_value <- get -< key
+      returnA -< case m_value of
+        Nothing    -> "Not found"
+        Just value -> value
+    ["set", key, value] -> do
+      set -< (key, value)
+      returnA -< ""
+    _ -> do
+      returnA -< "Invalid command"
