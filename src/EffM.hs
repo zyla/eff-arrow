@@ -59,5 +59,5 @@ run handlers = foldFree $ \(Request (request :: e i o) input f) ->
   case Map.lookup (typeRep (Proxy @e)) (unHandlerMap handlers) of
     Nothing -> error "handler not found"
     Just dyn ->
-      let Just handler = fromDynamic dyn :: Maybe (Handler m e)
+      let handler = fromMaybe (error "handler is of the wrong type") (fromDynamic dyn :: Maybe (Handler m e))
       in f <$> runHandler handler request input
