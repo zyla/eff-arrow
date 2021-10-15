@@ -25,6 +25,9 @@ source-repository head
 
 library
   exposed-modules:
+      Effects
+      EffM
+      ExamplesEffM
       Lib
       NoopLoop
       RSet
