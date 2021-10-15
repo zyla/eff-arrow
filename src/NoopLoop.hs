@@ -1,8 +1,11 @@
-{-#OPTIONS_GHC -ddump-ds #-}
+{-# LANGUAGE GADTs #-}
 module NoopLoop where
 
-import Lib
+import EffA
 import Control.Arrow
 
-noopLoop :: Eff () ()
+data NoOp i o where
+  NoOp :: NoOp () ()
+
+noopLoop :: EffA () ()
 noopLoop = send NoOp >>> noopLoop

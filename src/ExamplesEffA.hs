@@ -1,6 +1,6 @@
 {-# LANGUAGE Arrows, GADTs, RankNTypes, TypeApplications, ScopedTypeVariables, DerivingStrategies, GeneralizedNewtypeDeriving, KindSignatures #-}
 
-module ExamplesEffM where
+module ExamplesEffA where
 
 import Prelude hiding(id, print, (.))
 
@@ -23,7 +23,7 @@ import Control.Monad (when)
 import Data.Maybe
 import Data.GADT.Compare
 
-import EffM
+import EffA
 import Effects
 
 print = send Print
@@ -32,25 +32,26 @@ readLine = send ReadLine
 get = send Get
 set = send Set
 
-repl :: EffM ()
-repl = do
-  print "Enter command"
-  line <- readLine ()
-  when (line /= "q") $ do
-    response <- handleCommand line
-    print response
-    repl
+repl :: EffA () ()
+repl = proc () -> do
+  print -< "Enter command"
+  line <- readLine -< ()
+  if line /= "q" then do
+    response <- handleCommand -< line
+    print -< response
+    repl -< ()
+  else returnA -< ()
 
-handleCommand :: String -> EffM String
-handleCommand line =
+handleCommand :: EffA String String
+handleCommand = proc line ->
   case words line of
     ["get", key] -> do
-      m_value <- get key
-      pure $ case m_value of
+      m_value <- get -< key
+      returnA -< case m_value of
         Nothing    -> "Not found"
         Just value -> value
     ["set", key, value] -> do
-      set (key, value)
-      pure ""
+      set -< (key, value)
+      returnA -< ""
     _ -> do
-      pure "Invalid command"
+      returnA -< "Invalid command"
